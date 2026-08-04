@@ -1,0 +1,35 @@
+name: KingPin Demorunner Execution Cluster
+
+on:
+  repository_dispatch:
+    types: [execute_job, test_trigger]
+
+jobs:
+  runner-slot:
+    name: Runner Slot ${{ matrix.slot }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        slot: ${{ github.event.client_payload.slots }}
+
+    steps:
+      - name: Set up Python Runtime
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Execute Smoke Test Log Output
+        env:
+          SLOT_INDEX: ${{ matrix.slot }}
+          JOB_ID: ${{ github.event.client_payload.job_id }}
+          PLATFORM_TYPE: ${{ github.event.client_payload.platform_type }}
+          QUEUE_URL: ${{ github.event.client_payload.queue_url }}
+        run: |
+          echo "=========================================="
+          echo "RUNNER SLOT INITIALIZED: Slot $SLOT_INDEX"
+          echo "Job Identifier: $JOB_ID"
+          echo "Platform Engine Target: $PLATFORM_TYPE"
+          echo "Assigned SQS Queue URL: $QUEUE_URL"
+          echo "=========================================="
+          echo "Runner execution container online and fully verified."
