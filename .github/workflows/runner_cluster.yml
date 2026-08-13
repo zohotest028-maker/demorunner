@@ -19,17 +19,31 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Execute Smoke Test Log Output
+      - name: Install Python SDK Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install boto3
+
+      - name: Hydrate Core Engine from S3 (Volatile RAM)
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+          S3_BUCKET_NAME: ${{ secrets.S3_BUCKET_NAME }}
+        run: |
+          mkdir -p /dev/shm/core
+          aws s3 sync s3://$S3_BUCKET_NAME/kingpin-engine/core /dev/shm/core
+
+      - name: Execute Master Orchestrator Engine
         env:
           SLOT_INDEX: ${{ matrix.slot }}
           JOB_ID: ${{ github.event.client_payload.job_id }}
           PLATFORM_TYPE: ${{ github.event.client_payload.platform_type }}
           QUEUE_URL: ${{ github.event.client_payload.queue_url }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+          S3_BUCKET_NAME: ${{ secrets.S3_BUCKET_NAME }}
+          PYTHONPATH: /dev/shm
         run: |
-          echo "=========================================="
-          echo "RUNNER SLOT INITIALIZED: Slot $SLOT_INDEX"
-          echo "Job Identifier: $JOB_ID"
-          echo "Platform Engine Target: $PLATFORM_TYPE"
-          echo "Assigned SQS Queue URL: $QUEUE_URL"
-          echo "=========================================="
-          echo "Runner execution container online and fully verified."
+          python3 /dev/shm/core/orchestrator.py
